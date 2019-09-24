@@ -1,0 +1,109 @@
+---
+title: "Harrogate population by OA"
+author: "Citizens Online"
+date: "24/09/2019"
+output: 
+  html_document: 
+    keep_md: yes
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+# some options to do with how the output document is knitted
+knitr::opts_chunk$set(echo = FALSE)
+
+# load in some R packages we will be needing to help us
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(extrafont)
+```
+
+```{r data_in, echo = TRUE}
+# obtain csv from downloaded file...
+# age_data <- readr::read_csv("harrogate_age_by_oa.csv")
+
+# ...or direct from nomis website via their API:
+age_data <- readr::read_csv("http://www.nomisweb.co.uk/api/v01/dataset/NM_2010_1.data.csv?geography=1254233867...1254234384,1254263031...1254263044&date=latest&gender=0&c_age=200,201,203,209&measures=20100&select=geography_code,c_age_name,obs_value")
+
+# take a little look at the data
+glimpse(age_data)
+
+# rename the columns
+colnames(age_data) <- c("oa_code", "age_bracket", "population")
+
+# make a quick save of the data so if something goes wrong we don't need to
+# start off from the beginning again with the download
+saveRDS(age_data, "age_data1.Rds")
+```
+
+```{r data_shape}
+# if needed! reverses saveRDS line above
+# age_data <- readRDS("age_data1.Rds")
+
+# turn into a row per OA, with a column for each age category
+age_data <- pivot_wider(age_data, names_from = age_bracket, values_from = population)
+colnames(age_data) <- c("oa_code", "popn_total", "popn_under16", "popn16_64", "popn_over64")
+
+# sort table by total population
+age_data <- arrange(.data = age_data, desc(popn_total))
+saveRDS(age_data, "age_data2.Rds")
+```
+
+```{r plot_data}
+# age_data <- readRDS("age_data2.Rds")
+
+# obtain quartiles from population column: min, 25%, median, 75%, max
+quartiles <- round(quantile(age_data$popn_total, probs = seq(1, 0, length = 5), names = FALSE))
+
+# create a list of labels for the quartiles
+labels <- c("max:", "Q3:", "median:", "Q2:", "min:")
+
+# and another list that we will use to space the labels along the x-axis
+x_pos <- c(5, 120, 265, 400, 530)
+
+# create the base plot: columns and axes
+popn_plot <- ggplot(age_data,
+                aes(
+                  x = reorder(oa_code, -popn_total),
+                  y = popn_total
+                )) +
+              geom_col(width = 1, color = "#9e1981") +
+                labs(
+                  x = "Harrogate Output Areas (OAs) (n=532)",
+                  y = "Population",
+                  title = "Residents by OA, Harrogate, showing quartiles",
+                  # caption = "Source: ONS (Nomis), 2017")
+                  subtitle = "Source: ONS (Nomis), 2017") +
+                    theme(
+                      text = element_text(family = "Source Sans Pro"),
+                      axis.text.x = element_blank(),
+                      axis.ticks = element_blank(),
+                      title = element_text(face = "bold")
+                    )
+add_lines <- function(x, y, z) {
+  list(
+    geom_hline(yintercept = x, linetype = "dashed", colour = "grey25"),
+    geom_label(aes(y = x, x = z),
+    fill = "grey25",
+    colour = "white",
+    hjust = "inward",
+    vjust = "center",
+    nudge_y = -0.5,
+    label = paste(y, x),
+    label.r = unit(0, "mm"),
+    label.padding = unit(0.25, "lines"),
+    label.size = 0,
+    size = 2.5)
+  )
+}
+
+# here we pass the three lists of information (quartiles, labels and xaxis)
+# that are defined above, and pass them in turn to the function add_lines
+# as arguments x, y and z. This makes a list of instructions to make lines and 
+# labels. We then add this to the original plot to make an annotated plot:
+plot_lines <- popn_plot + mapply(add_lines, quartiles, labels, x_pos)
+plot_lines
+```
