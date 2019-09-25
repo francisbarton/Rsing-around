@@ -36,27 +36,28 @@ colnames(age_data) <- c("oa_code", "age_bracket", "population")
 
 # make a quick save of the data so if something goes wrong we don't need to
 # start off from the beginning again with the download
-saveRDS(age_data, "age_data1.Rds")
+saveRDS(age_data, "age_data.Rds")
 ```
 
 ```{r data_shape}
 # if needed! reverses saveRDS line above
-# age_data <- readRDS("age_data1.Rds")
+# age_data <- readRDS("age_data.Rds")
 
 # turn into a row per OA, with a column for each age category
-age_data <- pivot_wider(age_data, names_from = age_bracket, values_from = population)
-colnames(age_data) <- c("oa_code", "popn_total", "popn_under16", "popn16_64", "popn_over64")
+popn_data <- pivot_wider(age_data, names_from = age_bracket, values_from = population)
+colnames(popn_data) <- c("oa_code", "popn_total", "popn_under16", "popn16_64", "popn_over64")
 
 # sort table by total population
-age_data <- arrange(.data = age_data, desc(popn_total))
-saveRDS(age_data, "age_data2.Rds")
+popn_data <- arrange(.data = popn_data, desc(popn_total))
+saveRDS(popn_data, "popn_data.Rds")
 ```
 
 ```{r plot_data}
-# age_data <- readRDS("age_data2.Rds")
+# popn_data <- readRDS("popn_data.Rds")
 
 # obtain quartiles from population column: min, 25%, median, 75%, max
-quartiles <- round(quantile(age_data$popn_total, probs = seq(1, 0, length = 5), names = FALSE))
+quartiles <- round(quantile(popn_data$popn_total, probs = seq(1, 0, length = 5), names = FALSE))
+# octiles <- round(quantile(popn_data$popn_total, probs = seq(1, 0, length = 9), names = FALSE))
 
 # create a list of labels for the quartiles
 labels <- c("max:", "Q3:", "median:", "Q2:", "min:")
@@ -64,29 +65,11 @@ labels <- c("max:", "Q3:", "median:", "Q2:", "min:")
 # and another list that we will use to space the labels along the x-axis
 x_pos <- c(5, 120, 265, 400, 530)
 
-# create the base plot: columns and axes
-popn_plot <- ggplot(age_data,
-                aes(
-                  x = reorder(oa_code, -popn_total),
-                  y = popn_total
-                )) +
-              geom_col(width = 1, color = "#9e1981") +
-                labs(
-                  x = "Harrogate Output Areas (OAs) (n=532)",
-                  y = "Population",
-                  title = "Residents by OA, Harrogate, showing quartiles",
-                  # caption = "Source: ONS (Nomis), 2017")
-                  subtitle = "Source: ONS (Nomis), 2017") +
-                    theme(
-                      text = element_text(family = "Source Sans Pro"),
-                      axis.text.x = element_blank(),
-                      axis.ticks = element_blank(),
-                      title = element_text(face = "bold")
-                    )
+# function that will be used below to make lines and labels from the above lists
 add_lines <- function(x, y, z) {
   list(
     geom_hline(yintercept = x, linetype = "dashed", colour = "grey25"),
-    geom_label(aes(y = x, x = z),
+    geom_label(aes(y = x),
     fill = "grey25",
     colour = "white",
     hjust = "inward",
@@ -100,10 +83,121 @@ add_lines <- function(x, y, z) {
   )
 }
 
-# here we pass the three lists of information (quartiles, labels and xaxis)
-# that are defined above, and pass them in turn to the function add_lines
-# as arguments x, y and z. This makes a list of instructions to make lines and 
-# labels. We then add this to the original plot to make an annotated plot:
+x_pos2 <- c(1, 133, 265, 398, 530)
+x_pos3 <- c(40, 150, 265, 410, 510)
+y_pos3 <- c(1320, 490, 470, 450, 400)
+label_x <- c(31, 130, 265, 410, 510)
+label_y <- c(1300, 530, 510, 490, 420)
+hjusts <- c("left", "left", "center", "right", "right")
+
+add_annotations <- function(a, b, c, d, e, f, g, h) {
+  list(
+    annotate(
+      geom = "curve",
+      curvature = 0,
+      size = 1,
+      xend = a, # a = xpos2
+      yend = b, # b = quartiles
+      x = c, # c = x_pos3
+      y = d # d = y_pos3
+    ),
+    annotate(
+      geom = "text",
+      x = e, # e = label_x
+      y = f, # f = label_y
+      label = paste(g, b), # g = labels
+      hjust = h, # h = hjusts
+      size = 3
+    )
+  )
+}
+
+# create the base plot: columns and axes
+popn_plot <- popn_data %>% 
+  mutate(oa_code = fct_reorder(oa_code, popn_total, .desc = TRUE)) %>%
+    ggplot(aes(
+      x = oa_code,
+      y = popn_total,
+      group = 1)) +
+    geom_col(colour = "#9e1981", width = 1) +
+    scale_y_continuous(expand = expand_scale(add = c(10, 50))) +
+    scale_x_discrete(expand = expand_scale(add = c(5, 5))) +
+    # coord_flip() +
+    labs(
+      x = "Harrogate Output Areas (n=532)",
+      y = "Population",
+      title = "Population by OA, Harrogate, showing quartiles",
+      caption = "Source: ONS (Nomis), 2017") +
+    theme_light() +
+    theme(
+      panel.background = element_rect(fill = "grey90"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      text = element_text(family = c("Source Sans Pro", "sans")),
+      title = element_text(size = 12, face = "bold"),
+      axis.title = element_text(size = 10, face = "bold"),
+      # axis.text.y = element_text(margin = margin(5, -10, 5, 0, "mm")),
+      axis.text.x = element_blank(),
+      # axis.line = element_line(colour = "grey25", size = 1),
+      axis.ticks.x = element_blank()
+      # panel.spacing = margin(10, 60, 2, 10, "mm"),
+      # plot.margin = margin(5, 20, 5, 5, "mm")
+    )
+
+# here we pass the three lists of information (quartiles, labels and x_pos)
+# that are defined above to the function add_lines as arguments x, y and z.
+# we then add this to the original plot to make the annotated plot:
 plot_lines <- popn_plot + mapply(add_lines, quartiles, labels, x_pos)
-plot_lines
+
+plot_annotated <- popn_plot + mapply(
+  add_annotations,
+  x_pos2,
+  quartiles,
+  x_pos3,
+  y_pos3,
+  label_x,
+  label_y,
+  labels,
+  hjusts)
+
+# then we actually run the command to produce the plot
+# plot_lines
+plot_annotated
 ```
+
+```{r plot_age_data}
+age_data <- readRDS("age_data.Rds")
+
+age_data <- age_data %>%
+  filter(age_bracket != "All Ages") %>% 
+    group_by(oa_code) %>%
+      mutate(popn_total = sum(population)) %>%
+        ungroup() %>% 
+          mutate(oa_code = fct_reorder(oa_code, popn_total, .desc = TRUE))
+
+popn_age_plot <- age_data %>%
+  ggplot(aes(
+    x = oa_code,
+    y = population)) +
+    geom_col(aes(fill = age_bracket), width = 1) +
+    labs(
+      x = "Harrogate Output Areas (OAs) (n=532)",
+      y = "Population",
+      title = "Residents by OA, Harrogate, showing quartiles",
+      caption = "Source: ONS (Nomis), 2017",
+      fill = "Age bracket") +
+    theme_light() +
+    theme(
+      panel.background = element_rect(fill = "grey90"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 10, face = "bold"),
+      axis.text.x = element_blank(),
+      axis.ticks = element_blank(),
+      title = element_text(size = 12, face = "bold")
+    )
+popn_age_plot
+plot_age_lines <- popn_age_plot + mapply(add_lines, quartiles, labels, x_pos)
+plot_age_lines
+```
+
