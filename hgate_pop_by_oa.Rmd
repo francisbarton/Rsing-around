@@ -173,7 +173,7 @@ age_data <- age_data %>%
     group_by(oa_code) %>%
       mutate(popn_total = sum(population)) %>%
         ungroup() %>% 
-          mutate(oa_code = fct_reorder(oa_code, popn_total, .desc = TRUE))
+          mutate(oa_code = fct_reorder(total_popn, lsoa_label, .desc = TRUE))
 
 popn_age_plot <- age_data %>%
   ggplot(aes(
