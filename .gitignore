@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+.httr-oauth
+wordlist-en_GB-large-2019.10.06.zip

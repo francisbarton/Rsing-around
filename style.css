@@ -1,0 +1,14 @@
+:root {
+  --dark_slate_grey: #303030;
+  --almost_dark: #1b2431; /* chirag: mirage */
+}
+
+html {
+  font-size: 62.5%;
+}
+
+p {
+  font-size: 1.6rem;
+  color: var(--dark_slate_grey);
+  background-color: transparent;
+}
