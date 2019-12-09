@@ -1,11 +1,13 @@
-setwd("C:\\Users\\Francis\\Projects\\Rsing-around")
 library("stringr")
+library("purrr")
 
-download.file("https://github.com/dwyl/english-words/blob/master/words_alpha.zip", destfile = "words_alpha.zip")
-curl::curl_download("https://sourceforge.net/projects/wordlist/files/speller/2019.10.06/wordlist-en_GB-large-2019.10.06.zip/download", destfile = "wordlist-en_GB-large-2019.10.06.zip")
-download.file("https://proofingtoolgui.org/wordlist_marcoagpinto_20191201_230443w.txt", destfile = "pinto_words.txt")
-
-unzip("wordlist-en_GB-large-2019.10.06.zip")
+# alternatives for word lists (just found by searching)
+#
+# download.file("https://github.com/dwyl/english-words/blob/master/words_alpha.zip", destfile = "words_alpha.zip")
+# curl::curl_download("https://sourceforge.net/projects/wordlist/files/speller/2019.10.06/wordlist-en_GB-large-2019.10.06.zip/download", destfile = "wordlist-en_GB-large-2019.10.06.zip")
+# download.file("https://proofingtoolgui.org/wordlist_marcoagpinto_20191201_230443w.txt", destfile = "pinto_words.txt")
+#
+# unzip("wordlist-en_GB-large-2019.10.06.zip")
 
 split_it <- . %>% str_split("") %>% 
   map(~ paste0(., "[aeiou]*")) %>% unlist() %>% str_c(collapse="")
